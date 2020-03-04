@@ -82,14 +82,14 @@ if __name__ == "__main__":
     # compute recommendations
     UserItemAvg_errors_per_fold, UserKNN_errors_per_fold, UserKNNAvg_errors_per_fold, NMF_errors_per_fold = [], [], [], []
 
-    reader = Reader(rating_scale=(0, 1000))
+    reader = Reader(rating_scale=(1, 1000))
     dataset = Dataset.load_from_df(ratings_df, reader)
     folds_it = KFold(n_splits=5).split(dataset)
     for f, data in enumerate(folds_it):
         trainset, testset = data
 
-        """print("==========================================================================")
-        print("[Fold %d], UserItemAvg" % f)
+        print("==========================================================================")
+        print("[Fold %d], UserItemAvg" % (f+1))
         print("==========================================================================")
         UserItemAvg_preds = BaselineOnly().fit(trainset).test(testset)
         errors, ttest_results, pairwise_results = evaluate_for_each_group(UserItemAvg_preds, U1, U2, U3, U4, beyms, ms)
@@ -100,7 +100,7 @@ if __name__ == "__main__":
         print(pairwise_results["TukeyHSD"])
 
         print("==========================================================================")
-        print("[Fold %d], UserKNN" % f)
+        print("[Fold %d], UserKNN" % (f+1))
         print("==========================================================================")
         UserKNN_preds = KNNBasic(k=40, sim_options={"name": "cosine"}).fit(trainset).test(testset)
         errors, ttest_results, pairwise_results = evaluate_for_each_group(UserKNN_preds, U1, U2, U3, U4, beyms, ms)
@@ -111,7 +111,7 @@ if __name__ == "__main__":
         print(pairwise_results["TukeyHSD"])
 
         print("==========================================================================")
-        print("[Fold %d], UserKNNAvg" % f)
+        print("[Fold %d], UserKNNAvg" % (f+1))
         print("==========================================================================")
         UserKNNAvg_preds = KNNWithMeans(k=40, sim_options={"name": "cosine"}).fit(trainset).test(testset)
         errors, ttest_results, pairwise_results = evaluate_for_each_group(UserKNNAvg_preds, U1, U2, U3, U4, beyms, ms)
@@ -119,10 +119,10 @@ if __name__ == "__main__":
         print("Mean Absolute Error: " + str(errors))
         print("t-Test: " + str(ttest_results))
         print("ANOVA: " + str(pairwise_results["ANOVA"]))
-        print(pairwise_results["TukeyHSD"])"""
+        print(pairwise_results["TukeyHSD"])
 
         print("==========================================================================")
-        print("[Fold %d], NMF" % f)
+        print("[Fold %d], NMF" % (f+1))
         print("==========================================================================")
         NMF_preds = NMF(n_factors=15).fit(trainset).test(testset)
         errors, ttest_results, pairwise_results = evaluate_for_each_group(NMF_preds, U1, U2, U3, U4, beyms, ms)
