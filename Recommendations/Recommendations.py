@@ -10,7 +10,7 @@ def mean_of_dictionaries(*args):
     # sum dictionary entries
     counter = Counter()
     for dictionary in args:
-        counter += dictionary
+        counter += Counter(dictionary)
 
     # compute the average
     for key in counter:
