@@ -4,6 +4,7 @@ This reposity includes python scripts, ipython-notebooks and data necessary for 
 
 TODO
 
+
 ## Files
 To reproduce our results, the python scripts and ipython-notebooks must be executed in following order:
 
@@ -28,3 +29,11 @@ To reproduce our results, the python scripts and ipython-notebooks must be execu
 * hdbscan
 * surprise
 * statsmodels
+
+## Contributors
+* Peter Müllner, Know-Center GmbH, pmuellner [AT] know [MINUS] center [DOT] at (Contact)
+* Dominik Kowald, Know-Center GmBH
+* Markus Schedl, JKU Linz
+* Christine Bauer, JKU Linz
+* Eva Zangerle, University of Innsbruck
+* Elisabeth Lex, Graz University of Technology
