@@ -3,7 +3,7 @@ import numpy as np
 from surprise import Reader, Dataset, KNNBasic, BaselineOnly, KNNWithMeans, NMF, NormalPredictor
 from surprise.model_selection import KFold
 from collections import defaultdict, Counter
-from scipy.stats import ttest_ind, f_oneway, shapiro, mannwhitneyu, norm
+from scipy.stats import ttest_ind, f_oneway, mannwhitneyu, norm
 from statsmodels.stats.multicomp import pairwise_tukeyhsd
 import statsmodels.api as sm
 import pylab
@@ -21,6 +21,13 @@ def mean_of_dictionaries(*args):
         counter[key] /= len(args)
 
     return dict(counter)
+
+def mann_whitney_u_test(x, y, alternative="less"):
+    u_statistic, p = mannwhitneyu(x, y, alternative=alternative)
+    z = norm.ppf(p)
+    n = len(x) + len(y)
+    r = z / np.sqrt(n)
+    return u_statistic, p, r
 
 def evaluate_for_each_group(predictions, U1, U2, U3, U4, beyms, ms):
     list_of_error_tuples = []
@@ -65,20 +72,26 @@ def evaluate_for_each_group(predictions, U1, U2, U3, U4, beyms, ms):
     absolute_errors["U3"] = mae_per_user_df.loc["U3"]["mae"].values.tolist()
     absolute_errors["U4"] = mae_per_user_df.loc["U4"]["mae"].values.tolist()
 
-    shapiro_wilk = {"MS": shapiro(absolute_errors["ms"]), "BeyMS": shapiro(absolute_errors["beyms"])}
-    print(shapiro_wilk)
+    u, p, r = mann_whitney_u_test(absolute_errors["ms"], absolute_errors["beyms"], alternative="less")
+    mannwhitneyutest = {"MS >= BeyMS": {"U": u, "p_value": p, "r": r}}
 
-    u_statistic, p = mannwhitneyu(absolute_errors["ms"], absolute_errors["beyms"], alternative="less")
-    z = norm.ppf(p)
-    n = len(ms) + len(beyms)
-    r = z / np.sqrt(n)
-    mannwhitneyutest = {"MS >= BeyMS": {"U": u_statistic, "p_value": p, "r": r}}
+    u, p, r = mann_whitney_u_test(absolute_errors["ms"], absolute_errors["U2"], alternative="less")
+    mannwhitneyutest["MS >= U2"] = {"U": u, "p_value": p, "r": r}
 
-    u_statistic, p = mannwhitneyu(absolute_errors["U3"], absolute_errors["ms"], alternative="less")
-    z = norm.ppf(p)
-    n = len(U3) + len(ms)
-    r = z / np.sqrt(n)
-    mannwhitneyutest["U3 >= MS"] = {"U3 >= MS": {"U": u_statistic, "p_value": p, "r": r}}
+    u, p, r = mann_whitney_u_test(absolute_errors["ms"], absolute_errors["U3"], alternative="greater")
+    mannwhitneyutest["MS <= U3"] = {"U": u, "p_value": p, "r": r}
+
+    u, p, r = mann_whitney_u_test(absolute_errors["beyms"], absolute_errors["U1"], alternative="greater")
+    mannwhitneyutest["BeyMS <= U1"] = {"U": u, "p_value": p, "r": r}
+
+    u, p, r = mann_whitney_u_test(absolute_errors["beyms"], absolute_errors["U3"], alternative="greater")
+    mannwhitneyutest["BeyMS <= U3"] = {"U": u, "p_value": p, "r": r}
+
+    u, p, r = mann_whitney_u_test(absolute_errors["ms"], absolute_errors["U4"], alternative="greater")
+    mannwhitneyutest["BeyMS <= U4"] = {"U": u, "p_value": p, "r": r}
+
+    u, p, r = mann_whitney_u_test(absolute_errors["beyms"], absolute_errors["U2"], alternative="less")
+    mannwhitneyutest["BeyMS >= U2"] = {"U": u, "p_value": p, "r": r}
 
     t_statistic, ttest_p = ttest_ind(absolute_errors["ms"], absolute_errors["beyms"])
     ttest_p /= 2
@@ -132,8 +145,6 @@ if __name__ == "__main__":
     ratings_df = pd.read_csv("../data/ratings.csv")
 
     # compute recommendations
-    Random_errors_per_fold, Random_predictions = [], []
-    Normal_errors_per_fold, Normal_predictions = [], []
     UserItemAvg_errors_per_fold, UserItemAvg_predictions = [], []
     UserKNN_errors_per_fold, UserKNN_predictions = [], []
     UserKNNAvg_errors_per_fold, UserKNNAvg_predictions = [], []
@@ -144,41 +155,6 @@ if __name__ == "__main__":
     folds_it = KFold(n_splits=5).split(dataset)
     for f, data in enumerate(folds_it):
         trainset, testset = data
-
-        """print("==========================================================================")
-        print("[Fold %d], Random" % (f+1))
-        print("==========================================================================")
-        Random_preds = []
-        for rating, r_ in zip(trainset.all_ratings(), np.random.uniform(1, 1000, size=trainset.n_ratings)):
-            inner_u, inner_i, r = rating
-            u = trainset.to_raw_uid(inner_u)
-            i = trainset.to_raw_iid(inner_i)
-            details = None
-            Random_preds.append((u, i, r, r_, details))
-
-        print(np.mean([np.abs(r-r_) for _, _, r, r_, _ in Random_preds]))
-        errors, ttest_results, pairwise_results, mannwhitneyu_results = evaluate_for_each_group(Random_preds, U1, U2, U3, U4, beyms, ms)
-        Random_errors_per_fold.append(errors)
-        Random_predictions.extend(Random_preds)
-        print("Mean Absolute Error: " + str(errors))
-        print("t-Test: " + str(ttest_results))
-        print("ANOVA: " + str(pairwise_results["ANOVA"]))
-        print(pairwise_results["TukeyHSD"])
-        print("Mann-Whiteney-U Test: " + str(mannwhitneyu_results))
-
-        print("==========================================================================")
-        print("[Fold %d], Normal" % (f + 1))
-        print("==========================================================================")
-        Normal_preds = NormalPredictor().fit(trainset).test(testset)
-        errors, ttest_results, pairwise_results, mannwhitneyu_results = evaluate_for_each_group(Normal_preds, U1, U2,
-                                                                                                U3, U4, beyms, ms)
-        Normal_errors_per_fold.append(errors)
-        Normal_predictions.extend(Normal_preds)
-        print("Mean Absolute Error: " + str(errors))
-        print("t-Test: " + str(ttest_results))
-        print("ANOVA: " + str(pairwise_results["ANOVA"]))
-        print(pairwise_results["TukeyHSD"])
-        print("Mann-Whiteney-U Test: " + str(mannwhitneyu_results))"""
 
         print("==========================================================================")
         print("[Fold %d], UserItemAvg" % (f+1))
@@ -239,23 +215,6 @@ if __name__ == "__main__":
     print("[MAE over all folds] NMF: " + str(mean_of_dictionaries(*NMF_errors_per_fold)))
 
     print("============================================================")
-
-    errors, ttest_results, pairwise_results, mannwhitneyu_results = \
-        evaluate_for_each_group(Random_predictions, U1, U2, U3, U4, beyms, ms)
-    print("Mean Absolute Error: " + str(errors))
-    print("t-Test: " + str(ttest_results))
-    print("ANOVA: " + str(pairwise_results["ANOVA"]))
-    print(pairwise_results["TukeyHSD"])
-    print("Mann-Whiteney-U Test: " + str(mannwhitneyu_results))
-
-    errors, ttest_results, pairwise_results, mannwhitneyu_results = \
-        evaluate_for_each_group(Normal_predictions, U1, U2, U3, U4, beyms, ms)
-    print("Mean Absolute Error: " + str(errors))
-    print("t-Test: " + str(ttest_results))
-    print("ANOVA: " + str(pairwise_results["ANOVA"]))
-    print(pairwise_results["TukeyHSD"])
-    print("Mann-Whiteney-U Test: " + str(mannwhitneyu_results))
-
     errors, ttest_results, pairwise_results, mannwhitneyu_results = \
         evaluate_for_each_group(UserItemAvg_predictions, U1, U2, U3, U4, beyms, ms)
     print("Mean Absolute Error: " + str(errors))
