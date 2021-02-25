@@ -1,6 +1,6 @@
 # Support the Underground: Characteristics of Beyond-Mainstream Music Listeners
 
-This reposity includes python scripts and ipython-notebooks necessary for conducting analyses on the LFM-BeyMS dataset, available via Zenodo https://doi.org/10.5281/zenodo.3784765
+This reposity includes python scripts and ipython-notebooks necessary for conducting analyses on the LFM-BeyMS dataset, available via Zenodo https://doi.org/10.5281/zenodo.3784765. For more details, we refer to our publication in https://arxiv.org/abs/2102.12188.
 
 ## Files
 To reproduce our results, the python scripts and ipython-notebooks must be executed in following order:
